@@ -936,7 +936,7 @@ MonoBehaviour:
     m_Bits: 64
   _blockingLayers:
     serializedVersion: 2
-    m_Bits: 179
+    m_Bits: 83
   _maxSlope: 30
   _arcSpeed: 8
   _maxSegments: 40
