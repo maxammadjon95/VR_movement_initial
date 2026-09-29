@@ -17,6 +17,12 @@ namespace VRBase
         {
             _line = GetComponent<LineRenderer>();
             _line.useWorldSpace = true;
+
+            // A collider on the marker would be hit by the arc itself and push the marker towards the player.
+            if (_marker != null)
+                foreach (Collider collider in _marker.GetComponentsInChildren<Collider>())
+                    Destroy(collider);
+
             Hide();
         }
 
