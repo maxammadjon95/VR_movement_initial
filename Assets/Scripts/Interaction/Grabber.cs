@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VRBase
@@ -7,16 +8,26 @@ namespace VRBase
     /// </summary>
     public class Grabber : MonoBehaviour
     {
+        private const int VelocitySamples = 5;
+
         [SerializeField] private Hand _hand;
         [SerializeField] private float _radius = 0.08f;
         [SerializeField] private LayerMask _grabLayers = ~0;
         [SerializeField] private float _throwMultiplier = 1f;
+        [SerializeField] private float _maxThrowSpeed = 12f;
 
         private CharacterController _body;
-        private Vector3 _lastPosition;
-        private Quaternion _lastRotation;
-        private Vector3 _velocity;
-        private Vector3 _angularVelocity;
+        private Transform _rig;
+
+        // Hand motion is measured relative to the rig, so turning/teleporting/walking doesn't count as throwing.
+        private readonly Vector3[] _velocities = new Vector3[VelocitySamples];
+        private readonly Vector3[] _angularVelocities = new Vector3[VelocitySamples];
+        private int _sampleIndex;
+        private Vector3 _lastLocalPosition;
+        private Quaternion _lastLocalRotation;
+
+        // Released objects keep ignoring the body until they are out of it, otherwise physics shoots them away.
+        private readonly List<Grabbable> _leavingBody = new();
 
         public Hand Hand => _hand;
         public Grabbable Held { get; private set; }
@@ -24,12 +35,13 @@ namespace VRBase
         private void Awake()
         {
             _body = GetComponentInParent<CharacterController>();
+            _rig = _body != null ? _body.transform : transform.parent;
         }
 
         private void OnEnable()
         {
-            _lastPosition = transform.position;
-            _lastRotation = transform.rotation;
+            _lastLocalPosition = LocalPosition();
+            _lastLocalRotation = LocalRotation();
         }
 
         private void OnDisable() => Drop();
@@ -37,6 +49,7 @@ namespace VRBase
         private void Update()
         {
             TrackVelocity();
+            RestoreBodyCollisions();
 
             if (VRInput.WasPressed(_hand, VRButton.Grip))
                 TryGrab();
@@ -69,6 +82,7 @@ namespace VRBase
             if (closest.IsHeld)
                 closest.CurrentGrabber.Drop();
 
+            _leavingBody.Remove(closest);
             Held = closest;
             IgnoreBodyCollision(Held, true);
             Held.Attach(this);
@@ -81,8 +95,43 @@ namespace VRBase
 
             Grabbable released = Held;
             Held = null;
-            IgnoreBodyCollision(released, false);
-            released.Detach(_velocity * _throwMultiplier, _angularVelocity);
+            _leavingBody.Add(released);
+            released.Detach(ThrowVelocity(), AverageOf(_angularVelocities));
+        }
+
+        private Vector3 ThrowVelocity()
+        {
+            Vector3 velocity = AverageOf(_velocities) * _throwMultiplier;
+            return Vector3.ClampMagnitude(velocity, _maxThrowSpeed);
+        }
+
+        private void RestoreBodyCollisions()
+        {
+            if (_body == null) return;
+
+            for (int i = _leavingBody.Count - 1; i >= 0; i--)
+            {
+                Grabbable grabbable = _leavingBody[i];
+                if (grabbable != null && grabbable.IsHeld)
+                {
+                    _leavingBody.RemoveAt(i);
+                    continue;
+                }
+
+                if (grabbable == null || !OverlapsBody(grabbable))
+                {
+                    if (grabbable != null) IgnoreBodyCollision(grabbable, false);
+                    _leavingBody.RemoveAt(i);
+                }
+            }
+        }
+
+        private bool OverlapsBody(Grabbable grabbable)
+        {
+            foreach (Collider collider in grabbable.GetComponentsInChildren<Collider>())
+                if (collider.bounds.Intersects(_body.bounds))
+                    return true;
+            return false;
         }
 
         // A held object must not push the player's own body around.
@@ -98,19 +147,35 @@ namespace VRBase
             float dt = Time.deltaTime;
             if (dt <= 0f) return;
 
-            Vector3 velocity = (transform.position - _lastPosition) / dt;
+            Vector3 localPosition = LocalPosition();
+            Quaternion localRotation = LocalRotation();
 
-            Quaternion delta = transform.rotation * Quaternion.Inverse(_lastRotation);
+            Vector3 velocity = (localPosition - _lastLocalPosition) / dt;
+
+            Quaternion delta = localRotation * Quaternion.Inverse(_lastLocalRotation);
             delta.ToAngleAxis(out float angle, out Vector3 axis);
             if (angle > 180f) angle -= 360f;
             Vector3 angularVelocity = float.IsFinite(axis.x) ? axis * (angle * Mathf.Deg2Rad / dt) : Vector3.zero;
 
-            // Smooth a little so one jittery frame doesn't ruin a throw.
-            _velocity = Vector3.Lerp(_velocity, velocity, 0.5f);
-            _angularVelocity = Vector3.Lerp(_angularVelocity, angularVelocity, 0.5f);
+            // Stored in world space (rig's current orientation) and averaged over the last frames,
+            // so one jittery tracking frame doesn't ruin a throw.
+            _velocities[_sampleIndex] = RigToWorld(velocity);
+            _angularVelocities[_sampleIndex] = RigToWorld(angularVelocity);
+            _sampleIndex = (_sampleIndex + 1) % VelocitySamples;
 
-            _lastPosition = transform.position;
-            _lastRotation = transform.rotation;
+            _lastLocalPosition = localPosition;
+            _lastLocalRotation = localRotation;
+        }
+
+        private Vector3 LocalPosition() => _rig != null ? _rig.InverseTransformPoint(transform.position) : transform.position;
+        private Quaternion LocalRotation() => _rig != null ? Quaternion.Inverse(_rig.rotation) * transform.rotation : transform.rotation;
+        private Vector3 RigToWorld(Vector3 direction) => _rig != null ? _rig.TransformDirection(direction) : direction;
+
+        private static Vector3 AverageOf(Vector3[] samples)
+        {
+            Vector3 sum = Vector3.zero;
+            foreach (Vector3 sample in samples) sum += sample;
+            return sum / samples.Length;
         }
 
         private void OnDrawGizmosSelected()
