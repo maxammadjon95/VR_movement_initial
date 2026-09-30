@@ -260,7 +260,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2ea94141bfebb994685bb5ebc07aa339, type: 2}
+  - {fileID: 2100000, guid: 92f845725428c954b878da352f657fe5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2244,7 +2244,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VRBase.UIPointer
   _hand: 0
   _maxDistance: 10
-  _cursor: {fileID: 0}
+  _cursor: {fileID: 7413401071817834556, guid: 176c397e19b59d641819fa978642713d, type: 3}
 --- !u!120 &1412192612
 LineRenderer:
   serializedVersion: 3
@@ -2271,7 +2271,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2ea94141bfebb994685bb5ebc07aa339, type: 2}
+  - {fileID: 2100000, guid: 92f845725428c954b878da352f657fe5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2526,7 +2526,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -876546973899608171, guid: 80aa867ac363ac043847b06ad71604cd, type: 3}
+  - {fileID: 2100000, guid: 92f845725428c954b878da352f657fe5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2780,7 +2780,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VRBase.UIPointer
   _hand: 1
   _maxDistance: 10
-  _cursor: {fileID: 0}
+  _cursor: {fileID: 7413401071817834556, guid: 176c397e19b59d641819fa978642713d, type: 3}
 --- !u!120 &1648848313
 LineRenderer:
   serializedVersion: 3
@@ -2807,7 +2807,7 @@ LineRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2ea94141bfebb994685bb5ebc07aa339, type: 2}
+  - {fileID: 2100000, guid: 92f845725428c954b878da352f657fe5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
